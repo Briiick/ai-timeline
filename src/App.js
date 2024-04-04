@@ -1,25 +1,24 @@
-import logo from './logo.svg';
 import './App.css';
+import React from 'react';
+import SummaryList from './components/SummaryList';
 
-function App() {
+require('dotenv').config();
+
+const App = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <div className="header">
+        <div className="header-content">
+          <div className="header-left"><h1>AI Timeline</h1></div>
+          <div className="header-right"><p><i>Start date: 03/04/2024. Current date: {new Date().toLocaleDateString()}.</i></p></div>
+        </div>
+      </div>
+      <SummaryList />
+      <footer className="footer">
+        <p>&copy; {new Date().getFullYear()} | Sourced from HackerNews</p>
+      </footer>
     </div>
   );
-}
+};
 
 export default App;
