@@ -2,8 +2,6 @@ import './App.css';
 import React from 'react';
 import SummaryList from './components/SummaryList';
 
-require('dotenv').config();
-
 const App = () => {
   return (
     <div>
