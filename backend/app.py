@@ -1,73 +1,76 @@
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from rss_fetcher import fetch_rss_feed
-from summarizer import generate_daily_summary
 from datetime import date
-from sqlalchemy.dialects.postgresql import JSONB
-from flask_migrate import Migrate
+import logging
+import requests
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Create a custom logger
+logger = logging.getLogger(__name__)
+
+# Set level of logger
+logger.setLevel(logging.ERROR)
+
+# Create handlers
+handler = logging.StreamHandler()
+handler.setLevel(logging.ERROR)
+
+# Create formatters and add it to handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Add handlers to the logger
+logger.addHandler(handler)
 load_dotenv()
 
-# Now you can safely get the API key
-database_url = os.getenv('DATABASE_URL')
+# Get the Google Apps Script API URL from the environment variable
+gas_api_url = os.getenv('GAS_API_URL')
 
 app = Flask(__name__)
-postgres_username = 'alexanderbricken'
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-
-class DailySummary(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.Date, nullable=False, default=date.today, unique=True)
-    summary = db.Column(db.Text, nullable=False)
-    links = db.Column(JSONB, nullable=False)
-
-    def __repr__(self):
-        return f'<DailySummary {self.date}>'
-
-# Create the tables in the database
-with app.app_context():
-    db.create_all()
 
 @app.route('/')
 def home():
     return "Welcome to the Daily Summary API!"
 
-@app.route('/api/summaries')
-def get_summaries():
-    # Fetch RSS feed data
-    articles, links = fetch_rss_feed()
-
-    # Extract article titles
-    titles = [article['title'] for article in articles]
-
-    # Generate daily summary
-    summary = generate_daily_summary(titles)
-
-    # Store the daily summary in the database
-    today = date.today()
-    daily_summary = DailySummary(date=today, summary=summary, links=links)
-    db.session.add(daily_summary)
-    db.session.commit()
-
-    return jsonify({'date': today.strftime('%Y-%m-%d'), 'summary': summary, 'links': links})
+@app.route('/api/createsummary')
+def create_summary():
+    try:
+        # Make a request to the Google Apps Script API to fetch the data
+        response = requests.get(f'{gas_api_url}?action=createSummary')
+        data = response.json()
+        return jsonify(data)
+    except requests.exceptions.JSONDecodeError as e:
+        # Handle JSON decoding error
+        error_message = f"Failed to decode JSON response: {str(e)}"
+        logger.error(error_message)
+        return jsonify({"error": error_message}), 500
+    except Exception as e:
+        # Handle other exceptions
+        error_message = f"An error occurred: {str(e)}"
+        logger.error(error_message)
+        return jsonify({"error": error_message}), 500
 
 @app.route('/api/summaries/all')
 def get_all_summaries():
-    summaries = DailySummary.query.all()
-    result = []
-    for summary in summaries:
-        result.append({
-            'id': summary.id,
-            'date': summary.date.strftime('%Y-%m-%d'),
-            'summary': summary.summary,
-            'links': summary.links
-        })
-    return jsonify(result)
+    try:
+        # Make a request to the Google Apps Script API to fetch all summaries
+        response = requests.get(f'{gas_api_url}?action=getAllSummaries')
+
+        # Check the response status code
+        if response.status_code == 200:
+            # Directly return the response content as JSON
+            return response.content, 200, {'Content-Type': 'application/json'}
+        else:
+            # Handle non-200 status codes
+            error_message = f"API request failed with status code: {response.status_code}"
+            logger.error(error_message)
+            return jsonify({"error": error_message}), response.status_code
+
+    except Exception as e:
+        # Handle other exceptions
+        error_message = f"An error occurred: {str(e)}"
+        logger.error(error_message)
+        return jsonify({"error": error_message}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='127.0.0.1', port=8000)

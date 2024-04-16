@@ -25,4 +25,14 @@ yarn-error.log*
 .env
 /backend/.env
 backend/.env
+src/.env
 
+package.json
+
+archived
+.archived
+/archived
+
+functions/firebase-admin.json
+functions/.env
+firebase.json

@@ -7,7 +7,7 @@ const SummaryList = () => {
   useEffect(() => {
     const fetchSummaries = async () => {
       try {
-        const response = await axios.get('/api/summaries/all');
+        const response = await axios.get('https://ai-timelines-eni7imw2ma-uc.a.run.app/api/summaries/all');
         if (Array.isArray(response.data)) {
           setSummaries(response.data);
         } else {
@@ -26,31 +26,36 @@ const SummaryList = () => {
     ? [...summaries].sort((a, b) => new Date(b.date) - new Date(a.date))
     : [];
 
-  return (
-    <div>
-      <div className="content">
-        {sortedSummaries.map((summary) => {
-          // Format the date
-          let date = new Date(summary.date);
-          let formattedDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-          return (
-            <div key={summary.id}>
-              <h3>{formattedDate}</h3> {/* Use the formatted date here */}
-              <p>{summary.summary}</p>
-              <ul>
-                {summary.links && summary.links.map((link, index) => (
-                  <li key={index}>
-                    <a href={link} target="_blank" rel="noopener noreferrer">{link}</a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
+    return (
+      <div>
+        <div className="content">
+          {sortedSummaries.map((summary, index) => {
+            // Format the date
+            let date = new Date(summary.date);
+            let formattedDate = date.toISOString().split('T')[0];
+    
+            return (
+              <div key={`${summary.date}-${index}`}>
+                <h3>{formattedDate}</h3>
+                <p>{summary.summary}</p>
+                {summary.links && (
+                  <div>
+                    <h4>Links:</h4>
+                    <ul>
+                      {summary.links.map((link, linkIndex) => (
+                        <li key={`${summary.date}-${index}-${linkIndex}`}>
+                          <a href={link} target="_blank" rel="noopener noreferrer">{link}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
 }
 
 export default SummaryList;
